@@ -22,23 +22,32 @@ type LineEntry struct {
 	Contents string
 }
 
+func (entry LineEntry) Empty() bool {
+	return entry.Contents == ""
+}
+
 func (entry LineEntry) String() string {
 	return fmt.Sprintf("%d %s", entry.Number, entry.Contents)
 }
 
-// ParseLine parses a line into a line number prefix and string suffix.
-func parseLine(line string) (LineEntry, error) {
-	entry := LineEntry{}
+// StringSplitCarCdr splits a string into a head (one group of characters) and tail (remaining characters).
+func stringSplitCarCdr(s, delim string) (string, string) {
+	components := strings.SplitN(s, delim, 2)
+	return components[0], strings.Join(components[1:], "")
+}
 
-	components := strings.SplitN(strings.TrimSpace(line), " ", 2)
-	lineNumber, err := strconv.ParseUint(components[0], 10, 64)
+// ParseLine parses a line into a line number prefix and string suffix.
+func parseLine(line string) (entry LineEntry, err error) {
+	car, cdr := stringSplitCarCdr(strings.TrimSpace(line), " ")
+
+	lineNumber, err := strconv.ParseUint(car, 10, 64)
 	if err != nil {
 		return entry, err
 	}
 
 	entry.Number = lineNumber
-	if len(components) == 2 {
-		entry.Contents = strings.TrimSpace(components[1])
+	if cdr != "" {
+		entry.Contents = strings.TrimSpace(cdr)
 	}
 
 	return entry, nil
