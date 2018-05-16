@@ -16,6 +16,7 @@ import (
 	"os/user"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -24,20 +25,52 @@ const (
 )
 
 type TodoListWrapper struct {
-	Version int
-	// Items   []TodoListItem `json:"items"`
-	Items []LineEntry
-	// Items map[int]TodoListItem `json:"-"`
+	Items2 map[uint64]string
 }
 
-// TodoListItem holds a todo list item.
-type TodoListItem struct {
-	Line uint64
-	Body string
+func NewTodoListWrapper() *TodoListWrapper {
+	todoListWrapper := TodoListWrapper{}
+	todoListWrapper.Items2 = make(map[uint64]string)
+	return &todoListWrapper
 }
 
-func (item TodoListItem) String() string {
-	return fmt.Sprintf("%d %s", item.Line, item.Body)
+func (myfd *TodoListWrapper) keys() []uint64 {
+	out := make([]uint64, 0)
+	for k, _ := range myfd.Items2 {
+		out = append(out, k)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i] < out[j]
+	})
+	return out
+}
+
+func (myfd *TodoListWrapper) String() string {
+	out := make([]string, 0)
+	for _, k := range myfd.keys() {
+		out = append(out, myfd.Items2[k])
+	}
+	return strings.Join(out, "\n")
+}
+
+func (myfd *TodoListWrapper) Add(s string) {
+	if s == "" {
+		return
+	}
+
+	lineNumberString := strings.SplitN(s, " ", 2)[0]
+	lineNumber, err := strconv.ParseUint(lineNumberString, 10, 64)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// if s is lineNumberString, only a line number was entered
+	// [TODO] improve this
+	if s != lineNumberString {
+		myfd.Items2[lineNumber] = s
+	} else {
+		delete(myfd.Items2, lineNumber)
+	}
 }
 
 // GetCurrentUserHomeDir returns the home directory of the user running the program.
@@ -98,28 +131,8 @@ func (myfd *TodoListWrapper) readText(filepath string) {
 	dat := readString(filepath)
 	if dat != "" {
 		for _, line := range strings.Split(dat, "\n") {
-			myfd.ProcessLine(line)
+			myfd.Add(line)
 		}
-		myfd.Sort()
-	}
-}
-
-func (myfd *TodoListWrapper) ProcessLine(s string) {
-	if s == "" {
-		return
-	}
-
-	entry, err := parseLine(s)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	myfd.Items = Filter(myfd.Items, func(e LineEntry) bool {
-		return e.Number != entry.Number
-	})
-
-	if !entry.Empty() {
-		myfd.Items = append(myfd.Items, entry)
 	}
 }
 
@@ -143,11 +156,7 @@ func (myfd *TodoListWrapper) ProcessLine(s string) {
 
 // WriteText writes text data to a file.
 func (myfd *TodoListWrapper) writeText(filepath string) {
-	out := make([]string, 0)
-	for _, item := range myfd.Items {
-		out = append(out, item.String())
-	}
-	myString := strings.Join(out, "\n")
+	myString := myfd.String()
 	writeString(filepath, myString, 0644)
 }
 
@@ -162,38 +171,14 @@ func (myfd *TodoListWrapper) writeText(filepath string) {
 // 	writeData(filepath, bytes, 0644)
 // }
 
-func (myfd *TodoListWrapper) Sort() {
-	sort.Sort(ByLineNumber(myfd.Items))
-	// sort.Slice(myfd.Items2, func(i, j int) bool {
-	// 	return myfd.Items2[i].Line < myfd.Items2[j].Line
-	// })
-}
-
-func Filter(vs []LineEntry, f func(LineEntry) bool) []LineEntry {
-	vsf := make([]LineEntry, 0)
-	for _, v := range vs {
-		if f(v) {
-			vsf = append(vsf, v)
-		}
-	}
-	return vsf
-}
-
-func (myfd *TodoListWrapper) ShowItems() {
-	for _, item := range myfd.Items {
-		fmt.Println(item.String())
-	}
-}
-
 func main() {
 	mydatapath := getDataFilePath()
-	dt := TodoListWrapper{}
+	dt := NewTodoListWrapper()
 	dt.readText(mydatapath)
 
 	if len(os.Args) == 2 {
-		dt.ProcessLine(os.Args[1])
-		dt.Sort()
+		dt.Add(os.Args[1])
 	}
-	dt.ShowItems()
+	fmt.Println(dt.String())
 	dt.writeText(mydatapath)
 }
