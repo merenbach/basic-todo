@@ -9,7 +9,6 @@ package main
 // BASIC todo: enter with line number (or have autogen); ./mytodo list lists; ./mytodo 42 deletes item 42, ./mytodo 42 do stuff replaces or inserts item 42 (with feedback)
 
 import (
-	"container/list"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -27,9 +26,7 @@ const (
 type TodoListWrapper struct {
 	Version int
 	// Items   []TodoListItem `json:"items"`
-	Items  list.List `json:"items"`
-	Items2 []TodoListItem
-	Items3 []LineEntry
+	Items []LineEntry
 	// Items map[int]TodoListItem `json:"-"`
 }
 
@@ -101,13 +98,13 @@ func (myfd *TodoListWrapper) readText(filepath string) {
 	dat := readString(filepath)
 	if dat != "" {
 		for _, line := range strings.Split(dat, "\n") {
-			myfd.NewAddItem(line)
+			myfd.ProcessLine(line)
 		}
 		myfd.Sort()
 	}
 }
 
-func (myfd *TodoListWrapper) NewAddItem(s string) {
+func (myfd *TodoListWrapper) ProcessLine(s string) {
 	if s == "" {
 		return
 	}
@@ -117,12 +114,12 @@ func (myfd *TodoListWrapper) NewAddItem(s string) {
 		log.Fatal(err)
 	}
 
-	myfd.Items3 = Filter2(myfd.Items3, func(e LineEntry) bool {
+	myfd.Items = Filter(myfd.Items, func(e LineEntry) bool {
 		return e.Number != entry.Number
 	})
 
 	if !entry.Empty() {
-		myfd.Items3 = append(myfd.Items3, entry)
+		myfd.Items = append(myfd.Items, entry)
 	}
 }
 
@@ -147,7 +144,7 @@ func (myfd *TodoListWrapper) NewAddItem(s string) {
 // WriteText writes text data to a file.
 func (myfd *TodoListWrapper) writeText(filepath string) {
 	out := make([]string, 0)
-	for _, item := range myfd.Items3 {
+	for _, item := range myfd.Items {
 		out = append(out, item.String())
 	}
 	myString := strings.Join(out, "\n")
@@ -165,46 +162,14 @@ func (myfd *TodoListWrapper) writeText(filepath string) {
 // 	writeData(filepath, bytes, 0644)
 // }
 
-// // ByAge implements sort.Interface for []Person based on
-// // the Age field.
-// type ByLine []TodoListItem
-
-// func (a ByLine) Len() int           { return len(a) }
-// func (a ByLine) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-// func (a ByLine) Less(i, j int) bool { return a[i].Line < a[j].Line }
-// sort.Sort(ByLine(myfd.Items2))
-
-func (myfd *TodoListWrapper) AddItem(lineEntry LineEntry) {
-	// tli := TodoListItem{Body: item}
-	fmt.Println("Adding item: ", lineEntry)
-	// myfd.Items = append(myfd.Items, tli)
-
-	// 	myfd.DelItem(lineEntry.Number)
-	// 	myfd.Sort()
-	// 	if len(out) < 2 {
-	// 		return
-
-	// 	}
-
-	// 	item := TodoListItem{
-	// 		Line: linenum,
-	// 		Body: out[1],
-	// 	}
-	// 	myfd.Items2 = append(myfd.Items2, item)
-	// 	// fmt.Printf("Inserting %v\n", item)
-
-	// 	// fmt.Println("items now equals: ", myfd.Items2)
-	// 	myfd.Sort()
-}
-
 func (myfd *TodoListWrapper) Sort() {
-	sort.Sort(ByLineNumber(myfd.Items3))
+	sort.Sort(ByLineNumber(myfd.Items))
 	// sort.Slice(myfd.Items2, func(i, j int) bool {
 	// 	return myfd.Items2[i].Line < myfd.Items2[j].Line
 	// })
 }
 
-func Filter2(vs []LineEntry, f func(LineEntry) bool) []LineEntry {
+func Filter(vs []LineEntry, f func(LineEntry) bool) []LineEntry {
 	vsf := make([]LineEntry, 0)
 	for _, v := range vs {
 		if f(v) {
@@ -214,106 +179,21 @@ func Filter2(vs []LineEntry, f func(LineEntry) bool) []LineEntry {
 	return vsf
 }
 
-// func Filter(vs []TodoListItem, f func(TodoListItem) bool) []TodoListItem {
-// 	vsf := make([]TodoListItem, 0)
-// 	for _, v := range vs {
-// 		if f(v) {
-// 			vsf = append(vsf, v)
-// 		}
-// 	}
-// 	return vsf
-// }
-
-// func (myfd *TodoListWrapper) DelItem(lineNum uint64) {
-// 	fmt.Println("Deleting line: ", lineNum)
-
-// 	// 	myfd.Items2 = Filter(myfd.Items2, func(tli TodoListItem) bool {
-// 	// 		return tli.Line != lineNumber
-// 	// 	})
-
-// 	// fmt.Println("items now equals: ", myfd.Items2)
-
-// 	// tli := TodoListItem{Body: item}
-// 	// myfd.Items = append(myfd.Items, tli)
-// 	// myfd.Items.Remove(item)
-// }
-
-// func (myfd *TodoListWrapper) ToArray() []string {
-// 	out := make([]string, 0)
-// 	for _, item := range myfd.Items3 {
-// 		out = append(out, item.String())
-// 	}
-// 	// for temp := myfd.Items.Front(); temp != nil; temp = temp.Next() {
-// 	// 	out = append(out, temp.Value.(string))
-// 	// }
-// 	return out
-// }
-
-// func (myfd *TodoListWrapper) FromArray(ss []string) {
-// 	fmt.Println("importing from array: ", ss)
-// 	// myfd.Items2 = make([]TodoListItem, 0)
-// 	// for _, line := range ss {
-// 	// 	myfd.AddItem(line)
-// 	// }
-// 	// myfd.Sort()
-// 	// myfd.Items.Init()
-// 	// for _, s := range ss {
-// 	// 	myfd.Items.PushBack(s)
-// 	// }
-// }
-
 func (myfd *TodoListWrapper) ShowItems() {
-	for _, item := range myfd.Items3 {
+	for _, item := range myfd.Items {
 		fmt.Println(item.String())
 	}
-	// counter := 0
-	// for temp := myfd.Items.Front(); temp != nil; temp = temp.Next() {
-	// 	counter++
-	// 	fmt.Println(counter, temp.Value)
-	// }
 }
 
 func main() {
-	// if len(os.Args) < 2 {
-	// 	log.Fatalf("USAGE: %s COMMAND", os.Args[0])
-	// }
 	mydatapath := getDataFilePath()
 	dt := TodoListWrapper{}
 	dt.readText(mydatapath)
-	// if len(os.Args) == 1 {
-	// 	dt.ShowItems()
-	// 	os.Exit(0)
-	// }
+
 	if len(os.Args) == 2 {
-		dt.NewAddItem(os.Args[1])
+		dt.ProcessLine(os.Args[1])
 		dt.Sort()
 	}
 	dt.ShowItems()
 	dt.writeText(mydatapath)
-
-	// dt.AddItem("42")
-	// dt.AddItem("42 pet the cats")
-	// dt.AddItem("38 wash the car")
-	// dt.AddItem("57 clean the tub")
-	// dt.AddItem("823 wear a shirt")
-	// fmt.Println(dt.ToArray())
-	// dt.DelItem("823")
-
-	// if len(os.Args) == 2 {
-	// 	dt.AddItem(os.Args[1])
-
-	// }
-
-	// sample data
-	// dt.Reset()
-	// newItem1 := TodoListItem{Body: "Household chores"}
-	// newItem1_1 := TodoListItem{Body: "Mow the lawn"}
-	// newItem1_2 := TodoListItem{Body: "Wash the car"}
-	// newItem1.Items = append(newItem1.Items, newItem1_1)
-	// newItem1.Items = append(newItem1.Items, newItem1_2)
-	// dt.Items = append(dt.Items, newItem1)
-	// dt.Items = list.New()
-	// dt.Items.PushBack("Mow the lawn")
-	// dt.Items.PushBack("Wash tho car")
-
 }
