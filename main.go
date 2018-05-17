@@ -24,16 +24,19 @@ const (
 	DATAFILE_PATH = "mytodo"
 )
 
+// TodoList holds a todo list.
 type TodoList struct {
 	Items map[uint64]string
 }
 
+// NewTodoList returns a newly-initialized todo list.
 func NewTodoList() *TodoList {
 	t := TodoList{}
-	t.Items = make(map[uint64]string)
+	t.Init()
 	return &t
 }
 
+// Keys returns an ordered list of dictionary keys for the todo list.
 func (t *TodoList) keys() []uint64 {
 	out := make([]uint64, 0)
 	for k, _ := range t.Items {
@@ -51,6 +54,11 @@ func (t *TodoList) String() string {
 		out = append(out, t.Items[k])
 	}
 	return strings.Join(out, "\n")
+}
+
+// Init initalizes a todo list.
+func (t *TodoList) Init() {
+	t.Items = make(map[uint64]string)
 }
 
 // Set changes an item in the todo list.
