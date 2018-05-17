@@ -6,6 +6,7 @@ package main
 // TODO: use pointers for memory efficiency
 // TODO: use interface so that you can have a local file todo list item, a Dynamo todo list item, etc.
 // TODO: use interface{} for key, instead of string or number? how do we handle sorting properly?
+// TODO: save on each change? ctrl-c in interactive mode causes data loss of all changes
 // BASIC todo: enter with line number (or have autogen); ./mytodo list lists; ./mytodo 42 deletes item 42, ./mytodo 42 do stuff replaces or inserts item 42 (with feedback)
 
 import (
