@@ -24,19 +24,19 @@ const (
 	DATAFILE_PATH = "mytodo"
 )
 
-type TodoListWrapper struct {
-	Items2 map[uint64]string
+type TodoList struct {
+	Items map[uint64]string
 }
 
-func NewTodoListWrapper() *TodoListWrapper {
-	todoListWrapper := TodoListWrapper{}
-	todoListWrapper.Items2 = make(map[uint64]string)
-	return &todoListWrapper
+func NewTodoList() *TodoList {
+	t := TodoList{}
+	t.Items = make(map[uint64]string)
+	return &t
 }
 
-func (myfd *TodoListWrapper) keys() []uint64 {
+func (t *TodoList) keys() []uint64 {
 	out := make([]uint64, 0)
-	for k, _ := range myfd.Items2 {
+	for k, _ := range t.Items {
 		out = append(out, k)
 	}
 	sort.Slice(out, func(i, j int) bool {
@@ -45,15 +45,25 @@ func (myfd *TodoListWrapper) keys() []uint64 {
 	return out
 }
 
-func (myfd *TodoListWrapper) String() string {
+func (t *TodoList) String() string {
 	out := make([]string, 0)
-	for _, k := range myfd.keys() {
-		out = append(out, myfd.Items2[k])
+	for _, k := range t.keys() {
+		out = append(out, t.Items[k])
 	}
 	return strings.Join(out, "\n")
 }
 
-func (myfd *TodoListWrapper) Add(s string) {
+// Set changes an item in the todo list.
+func (t *TodoList) Set(k uint64, v string) {
+	if v != "" {
+		t.Items[k] = v
+	} else {
+		delete(t.Items, k)
+	}
+}
+
+// Parse parses a line and adds it to the todo list.
+func (t *TodoList) Parse(s string) {
 	if s == "" {
 		return
 	}
@@ -66,11 +76,10 @@ func (myfd *TodoListWrapper) Add(s string) {
 
 	// if s is lineNumberString, only a line number was entered
 	// [TODO] improve this
-	if s != lineNumberString {
-		myfd.Items2[lineNumber] = s
-	} else {
-		delete(myfd.Items2, lineNumber)
+	if s == lineNumberString {
+		s = ""
 	}
+	t.Set(lineNumber, s)
 }
 
 // GetCurrentUserHomeDir returns the home directory of the user running the program.
@@ -127,17 +136,17 @@ func writeData(filepath string, data []byte, mode os.FileMode) {
 }
 
 // ReadText reads text data from a file.
-func (myfd *TodoListWrapper) readText(filepath string) {
+func (t *TodoList) readText(filepath string) {
 	dat := readString(filepath)
 	if dat != "" {
 		for _, line := range strings.Split(dat, "\n") {
-			myfd.Add(line)
+			t.Parse(line)
 		}
 	}
 }
 
 // ReadJSON reads JSON data from a file.
-// func (myfd *TodoListWrapper) readJSON(filepath string) {
+// func (t *TodoList) readJSON(filepath string) {
 // 	dat := readData(filepath)
 // 	if dat != nil {
 // 		data := []string{}
@@ -145,24 +154,24 @@ func (myfd *TodoListWrapper) readText(filepath string) {
 // 		if err != nil {
 // 			log.Fatal(err)
 // 		}
-// 		myfd.FromArray(data)
+// 		t.FromArray(data)
 // 	}
 // }
 
 // Reset clears todo list items.
-// func (myfd *TodoListWrapper) Reset() {
-// 	myfd.Items = make([]TodoListItem, 0)
+// func (t *TodoList) Reset() {
+// 	t.Items = make([]TodoListItem, 0)
 // }
 
 // WriteText writes text data to a file.
-func (myfd *TodoListWrapper) writeText(filepath string) {
-	myString := myfd.String()
+func (t *TodoList) writeText(filepath string) {
+	myString := t.String()
 	writeString(filepath, myString, 0644)
 }
 
 // WriteJSON writes JSON data to a file.
-// func (myfd *TodoListWrapper) writeJSON(filepath string) {
-// 	strings := myfd.ToArray()
+// func (t *TodoList) writeJSON(filepath string) {
+// 	strings := t.ToArray()
 // 	bytes, err := json.Marshal(strings)
 // 	if err != nil {
 // 		// TODO: try to recover or write temp file here
@@ -173,11 +182,11 @@ func (myfd *TodoListWrapper) writeText(filepath string) {
 
 func main() {
 	mydatapath := getDataFilePath()
-	dt := NewTodoListWrapper()
+	dt := NewTodoList()
 	dt.readText(mydatapath)
 
 	if len(os.Args) == 2 {
-		dt.Add(os.Args[1])
+		dt.Parse(os.Args[1])
 	}
 	fmt.Println(dt.String())
 	dt.writeText(mydatapath)
