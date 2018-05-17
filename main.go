@@ -9,6 +9,7 @@ package main
 // BASIC todo: enter with line number (or have autogen); ./mytodo list lists; ./mytodo 42 deletes item 42, ./mytodo 42 do stuff replaces or inserts item 42 (with feedback)
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -72,19 +73,15 @@ func (t *TodoList) Set(k uint64, v string) {
 
 // Parse parses a line and adds it to the todo list.
 func (t *TodoList) Parse(s string) {
-	if s == "" {
-		return
-	}
-
-	lineNumberString := strings.SplitN(s, " ", 2)[0]
-	lineNumber, err := strconv.ParseUint(lineNumberString, 10, 64)
+	components := strings.SplitN(s, " ", 2)
+	lineNumber, err := strconv.ParseUint(components[0], 10, 64)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// if s is lineNumberString, only a line number was entered
+	// Was anything but a line number entered?
 	// [TODO] improve this
-	if s == lineNumberString {
+	if s == components[0] {
 		s = ""
 	}
 	t.Set(lineNumber, s)
@@ -177,6 +174,36 @@ func (t *TodoList) writeText(filepath string) {
 	writeString(filepath, myString, 0644)
 }
 
+// ProcessInput processes user input from an interactive session.
+func (t *TodoList) processInput(input string) {
+	switch line := strings.TrimSpace(input); line {
+	case "q":
+		os.Exit(0)
+	case "quit":
+		os.Exit(0)
+	case "l":
+		fmt.Println(t)
+	case "list":
+		fmt.Println(t)
+	default:
+		t.Parse(line)
+		fmt.Println(t)
+	}
+}
+
+// Shell starts an interactive shell.
+func (t *TodoList) Shell() {
+	reader := bufio.NewReader(os.Stdin)
+	for {
+		fmt.Print("> ")
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		t.processInput(input)
+	}
+}
+
 // WriteJSON writes JSON data to a file.
 // func (t *TodoList) writeJSON(filepath string) {
 // 	strings := t.ToArray()
@@ -194,8 +221,9 @@ func main() {
 	dt.readText(mydatapath)
 
 	if len(os.Args) == 2 {
-		dt.Parse(os.Args[1])
+		dt.processInput(os.Args[1])
+	} else {
+		dt.Shell()
 	}
-	fmt.Println(dt.String())
 	dt.writeText(mydatapath)
 }
