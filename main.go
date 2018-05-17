@@ -195,7 +195,6 @@ func (t *TodoList) processInput(input string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println(t)
 	}
 	return nil
 }
@@ -235,6 +234,7 @@ func main() {
 
 	if len(os.Args) == 2 {
 		dt.processInput(os.Args[1])
+		fmt.Println(dt)
 	} else {
 		dt.Shell(">", dt.processInput)
 	}
