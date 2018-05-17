@@ -72,11 +72,11 @@ func (t *TodoList) Set(k uint64, v string) {
 }
 
 // Parse parses a line and adds it to the todo list.
-func (t *TodoList) Parse(s string) {
+func (t *TodoList) Parse(s string) error {
 	components := strings.SplitN(s, " ", 2)
 	lineNumber, err := strconv.ParseUint(components[0], 10, 64)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Was anything but a line number entered?
@@ -85,6 +85,7 @@ func (t *TodoList) Parse(s string) {
 		s = ""
 	}
 	t.Set(lineNumber, s)
+	return nil
 }
 
 // GetCurrentUserHomeDir returns the home directory of the user running the program.
@@ -145,7 +146,7 @@ func (t *TodoList) readText(filepath string) {
 	dat := readString(filepath)
 	if dat != "" {
 		for _, line := range strings.Split(dat, "\n") {
-			t.Parse(line)
+			_ = t.Parse(line)
 		}
 	}
 }
@@ -174,8 +175,8 @@ func (t *TodoList) writeText(filepath string) {
 	writeString(filepath, myString, 0644)
 }
 
-// ProcessInput processes user input from an interactive session.
-func (t *TodoList) processInput(input string) {
+// processInput processes user input from an interactive session.
+func (t *TodoList) processInput(input string) error {
 	switch line := strings.TrimSpace(input); line {
 	case "q":
 		os.Exit(0)
@@ -185,22 +186,34 @@ func (t *TodoList) processInput(input string) {
 		fmt.Println(t)
 	case "list":
 		fmt.Println(t)
+	case "h":
+		fmt.Println("Type a line number and a string, or (l)ist, or (h)elp.")
+	case "help":
+		fmt.Println("Type a line number and a string, or (l)ist, or (h)elp.")
 	default:
-		t.Parse(line)
+		err := t.Parse(line)
+		if err != nil {
+			return err
+		}
 		fmt.Println(t)
 	}
+	return nil
 }
 
-// Shell starts an interactive shell.
-func (t *TodoList) Shell() {
+// Shell starts an interactive shell, infinitely printing the given prompt, and processes with the given function.
+func (t *TodoList) Shell(prompt string, f func(string) error) error {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print("> ")
+		fmt.Printf("%s ", prompt)
 		input, err := reader.ReadString('\n')
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
-		t.processInput(input)
+
+		err = f(strings.TrimSpace(input))
+		if err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
@@ -223,7 +236,7 @@ func main() {
 	if len(os.Args) == 2 {
 		dt.processInput(os.Args[1])
 	} else {
-		dt.Shell()
+		dt.Shell(">", dt.processInput)
 	}
 	dt.writeText(mydatapath)
 }
